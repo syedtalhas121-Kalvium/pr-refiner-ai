@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitDiff → PR Description Writer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+  <header class="bg-slate-800 border-b border-slate-700 py-4 px-6 shadow-md">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <span class="bg-indigo-600 text-white font-bold px-3 py-1 rounded text-sm">PR AI</span>
+        <h1 class="text-xl font-semibold tracking-tight">Git Diff → PR Description Writer</h1>
+      </div>
+      <div class="text-xs text-slate-400 bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700">
+        🔒 Backend-only AI security enabled
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-grow max-w-5xl w-full mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Input Section -->
+    <div class="flex flex-col space-y-4">
+      <div class="flex justify-between items-center">
+        <label for="diffInput" class="text-sm font-medium text-slate-300">Paste your Git Diff (`git diff`)</label>
+        <button id="sampleBtn" class="text-xs text-indigo-400 hover:text-indigo-300 underline">Load Sample Diff</button>
+      </div>
+      <textarea id="diffInput" rows="16" placeholder="diff --git a/src/App.tsx b/src/App.tsx..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-4 font-mono text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition"></textarea>
+      
+      <button id="generateBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-3 px-4 rounded-lg transition flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/20">
+        <span>Generate Professional PR Description</span>
+      </button>
+    </div>
+
+    <!-- Output Section -->
+    <div class="flex flex-col space-y-4">
+      <div class="flex justify-between items-center">
+        <span class="text-sm font-medium text-slate-300">Generated PR Description</span>
+        <button id="copyBtn" class="hidden text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded border border-slate-700 transition flex items-center space-x-1">
+          <span>Copy Markdown</span>
+        </button>
+      </div>
+
+      <div id="outputContainer" class="flex-grow bg-slate-800 border border-slate-700 rounded-lg p-4 font-mono text-xs text-slate-200 overflow-y-auto whitespace-pre-wrap min-h-[400px] max-h-[550px]">
+        <div class="text-slate-500 italic h-full flex items-center justify-center text-center">
+          Paste your git diff on the left and click generate to instantly produce a professional PR description.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-slate-800 border-t border-slate-700 py-4 px-6 text-center text-xs text-slate-400">
+    <p>Built to solve the personal frustration of lazy one-line PR descriptions. Powered by OpenAI gpt-4o-mini on the backend.</p>
+  </footer>
+
+  <script>
+    const generateBtn = document.getElementById('generateBtn');
+    const diffInput = document.getElementById('diffInput');
+    const outputContainer = document.getElementById('outputContainer');
+    const copyBtn = document.getElementById('copyBtn');
+    const sampleBtn = document.getElementById('sampleBtn');
+
+    const sampleDiff = `diff --git a/backend/server.js b/backend/server.js
+index 82b12a9..9f2c1d4 100644
+--- a/backend/server.js
++ b/backend/server.js
+@@ -10,6 +10,12 @@ app.use(cors());
+ app.use(express.json());
+ 
++// Health check endpoint
++app.get('/health', (req, res) => {
++  res.json({ status: 'ok', timestamp: new Date().toISOString() });
++});
++
+ app.post('/api/generate-pr', async (req, res) => {
+   try {
+     const { diff } = req.body;`;
+
+    sampleBtn.addEventListener('click', () => {
+      diffInput.value = sampleDiff;
+    });
+
+    // Auto-detect backend URL (localhost for local, or deployed backend URL)
+    const getBackendUrl = () => {
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+      }
+      // If deployed on static hosting, user can configure or we default to relative / render URL
+      return window.BACKEND_URL || 'http://localhost:3000';
+    };
+
+    generateBtn.addEventListener('click', async () => {
+      const diffText = diffInput.value.trim();
+      if (!diffText) {
+        alert('Please paste a git diff first.');
+        return;
+      }
+
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating PR Description...`;
+      outputContainer.innerHTML = `<div class="text-slate-400 italic flex items-center justify-center h-full">Analyzing git diff structure and summarizing changes...</div>`;
+      copyBtn.classList.add('hidden');
+
+      try {
+        const backendUrl = getBackendUrl();
+        const res = await fetch(`${backendUrl}/api/generate-pr`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ diff: diffText })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to generate PR description');
+        }
+
+        outputContainer.textContent = data.description;
+        copyBtn.classList.remove('hidden');
+      } catch (err) {
+        outputContainer.innerHTML = `<span class="text-red-400">Error: ${err.message}. Ensure backend is running and reachable.</span>`;
+      } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = `<span>Generate Professional PR Description</span>`;
+      }
+    });
+
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(outputContainer.textContent);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyBtn.textContent = 'Copy Markdown';
+      }, 2000);
+    });
+  </script>
+</body>
+</html>
